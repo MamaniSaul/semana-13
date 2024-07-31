@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejemplo Práctico de Árboles VP</title>
+    <script>
+        // Define the Song class
+        class Song {
+            constructor(title, tempo, pitch, duration) {
+                this.title = title;
+                this.tempo = tempo;
+                this.pitch = pitch;
+                this.duration = duration;
+            }
+
+            // Calculate the distance between two songs based on their attributes
+            distanceTo(other) {
+                return Math.sqrt(
+                    Math.pow(this.tempo - other.tempo, 2) +
+                    Math.pow(this.pitch - other.pitch, 2) +
+                    Math.pow(this.duration - other.duration, 2)
+                );
+            }
+        }
+
+        // Define the VP Tree Node class
+        class VPTreeNode {
+            constructor(song) {
+                this.song = song;
+                this.left = null;
+                this.right = null;
+                this.threshold = 0;
+            }
+        }
+
+        // Define the VP Tree class
+        class VPTree {
+            constructor(songs) {
+                this.root = this.buildTree(songs);
+            }
+
+            buildTree(songs) {
+                if (songs.length === 0) return null;
+                let node = new VPTreeNode(songs[0]);
+                if (songs.length === 1) return node;
+
+                let distances = songs.slice(1).map(song => node.song.distanceTo(song));
+                distances.sort((a, b) => a - b);
+                node.threshold = distances[Math.floor(distances.length / 2)];
+
+                let leftSongs = [];
+                let rightSongs = [];
+                for (let i = 1; i < songs.length; i++) {
+                    if (node.song.distanceTo(songs[i]) <= node.threshold) {
+                        leftSongs.push(songs[i]);
+                    } else {
+                        rightSongs.push(songs[i]);
+                    }
+                }
+
+                node.left = this.buildTree(leftSongs);
+                node.right = this.buildTree(rightSongs);
+
+                return node;
+            }
+
+            search(song, k = 3) {
+                let heap = [];
+                this._search(this.root, song, k, heap);
+                return heap.map(entry => entry.song).sort((a, b) => a.distanceTo(song) - b.distanceTo(song));
+            }
+
+            _search(node, song, k, heap) {
+                if (node === null) return;
+
+                let distance = song.distanceTo(node.song);
+                if (heap.length < k) {
+                    heap.push({ song: node.song, distance });
+                    heap.sort((a, b) => b.distance - a.distance);
+                } else if (distance < heap[0].distance) {
+                    heap[0] = { song: node.song, distance };
+                    heap.sort((a, b) => b.distance - a.distance);
+                }
+
+                if (node.left && distance - node.threshold <= heap[0].distance) {
+                    this._search(node.left, song, k, heap);
+                }
+                if (node.right && distance + node.threshold >= heap[0].distance) {
+                    this._search(node.right, song, k, heap);
+                }
+            }
+        }
+
+        // Sample songs data
+        let songs = [
+            new Song("Song 1", 120, 5, 3.5),
+            new Song("Song 2", 130, 6, 4.0),
+            new Song("Song 3", 110, 5.5, 3.0),
+            new Song("Song 4", 125, 7, 3.8),
+            new Song("Song 5", 135, 6.5, 4.2)
+        ];
+
+        let vpTree = new VPTree(songs);
+
+        function findSimilarSongs() {
+            let inputSong = new Song("Input Song", parseFloat(document.getElementById('tempo').value), parseFloat(document.getElementById('pitch').value), parseFloat(document.getElementById('duration').value));
+            let similarSongs = vpTree.search(inputSong);
+            let resultList = document.getElementById('results');
+            resultList.innerHTML = '';
+
+            similarSongs.forEach(song => {
+                let li = document.createElement('li');
+                li.textContent = `${song.title} (Tempo: ${song.tempo}, Pitch: ${song.pitch}, Duration: ${song.duration})`;
+                resultList.appendChild(li);
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Ejemplo Práctico de Árboles VP</h1>
+    <p>Introduce las características de una canción para encontrar canciones similares:</p>
+    <label for="tempo">Tempo:</label>
+    <input type="number" id="tempo" step="any" required><br>
+    <label for="pitch">Pitch:</label>
+    <input type="number" id="pitch" step="any" required><br>
+    <label for="duration">Duración:</label>
+    <input type="number" id="duration" step="any" required><br>
+    <button onclick="findSimilarSongs()">Buscar Canciones Similares</button>
+    <h2>Resultados:</h2>
+    <ul id="results"></ul>
+</body>
+</html>

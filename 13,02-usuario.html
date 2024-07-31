@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Corrección de Nombres de Usuarios</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            margin: 20px;
+        }
+        .suggestion-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .users-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .users-list li {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h1 class="mb-4">Corrección de Nombres de Usuarios</h1>
+                
+                <div class="registration-section mb-4">
+                    <div class="form-group">
+                        <label for="new-username">Registrar un nuevo nombre de usuario:</label>
+                        <input type="text" id="new-username" name="new-username" class="form-control">
+                    </div>
+                    <button class="btn btn-primary" onclick="registerUsername()">Registrar</button>
+                </div>
+                
+                <div class="input-section mb-4">
+                    <div class="form-group">
+                        <label for="username">Introduce un nombre de usuario:</label>
+                        <input type="text" id="username" name="username" class="form-control" oninput="suggestNames()">
+                    </div>
+                </div>
+                
+                <div class="suggestions" id="suggestions">
+                    <h2>Sugerencias:</h2>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <h2>Usuarios Registrados:</h2>
+                <ul id="users-list" class="users-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let registeredUsernames = [];
+
+        const usernames = [
+            'Carlos', 'Juan', 'Marta', 'Ana', 'Jose', 'Marcos', 'Lucia', 'Luis', 'Pedro', 'Sofia',
+            'Daniel', 'Valeria', 'Sebastian', 'Miguel', 'Natalia', 'Gabriel', 'Matias', 'Isabella',
+            'David', 'Sara', 'Alejandro', 'Paula', 'Javier', 'Andrea', 'Pablo', 'Cristina', 'Diego',
+            'Raquel', 'Fernando', 'Laura'
+        ];
+
+        function registerUsername() {
+            const newUsername = document.getElementById('new-username').value.trim();
+            if (newUsername === '') {
+                alert('Por favor, introduce un nombre de usuario válido.');
+                return;
+            }
+            if (registeredUsernames.includes(newUsername.toLowerCase())) {
+                alert('El nombre de usuario ya existe.');
+                return;
+            }
+            registeredUsernames.push(newUsername.toLowerCase());
+            updateUserList();
+            alert('Nombre de usuario registrado con éxito.');
+        }
+
+        function updateUserList() {
+            const usersList = document.getElementById('users-list');
+            usersList.innerHTML = ''; // Limpiar la lista actual
+            registeredUsernames.forEach(username => {
+                const listItem = document.createElement('li');
+                listItem.textContent = username;
+                usersList.appendChild(listItem);
+            });
+        }
+
+        function levenshteinDistance(a, b) {
+            const matrix = [];
+
+            for (let i = 0; i <= b.length; i++) {
+                matrix[i] = [i];
+            }
+
+            for (let j = 0; j <= a.length; j++) {
+                matrix[0][j] = j;
+            }
+
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) == a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, // sustitución
+                                                Math.min(matrix[i][j - 1] + 1, // inserción
+                                                         matrix[i - 1][j] + 1)); // eliminación
+                    }
+                }
+            }
+
+            return matrix[b.length][a.length];
+        }
+
+        function suggestNames() {
+            const input = document.getElementById('username').value.trim().toLowerCase();
+            const suggestionsDiv = document.getElementById('suggestions');
+            suggestionsDiv.innerHTML = '<h2>Sugerencias:</h2>'; // Limpiar sugerencias previas
+
+            if (input === '') {
+                return;
+            }
+
+            const combinedUsernames = registeredUsernames.concat(usernames.map(name => name.toLowerCase()));
+
+            if (combinedUsernames.includes(input)) {
+                suggestionsDiv.innerHTML += '<p>El nombre de usuario ya existe. Aquí tienes algunas sugerencias:</p>';
+            } else {
+                suggestionsDiv.innerHTML += '<p>El nombre de usuario está disponible.</p>';
+                return;
+            }
+
+            const suggestions = combinedUsernames
+                .filter(name => name !== input)
+                .map(name => ({ name, distance: levenshteinDistance(input, name) }))
+                .sort((a, b) => a.distance - b.distance)
+                .slice(0, 5); // Obtener las 5 sugerencias más cercanas
+
+            suggestions.forEach(suggestion => {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = 'suggestion-item';
+                suggestionItem.textContent = `${suggestion.name} (Distancia: ${suggestion.distance})`;
+                suggestionsDiv.appendChild(suggestionItem);
+            });
+        }
+    </script>
+</body>
+</html>

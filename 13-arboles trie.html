@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autocomplete con Trie y Visualización</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .autocomplete-container {
+            position: relative;
+            width: 300px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .suggestions {
+            border: 1px solid #ccc;
+            border-top: none;
+            position: absolute;
+            width: 100%;
+            max-height: 150px;
+            overflow-y: auto;
+            background-color: #fff;
+        }
+        .suggestions div {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .suggestions div:hover {
+            background-color: #f0f0f0;
+        }
+        .trie-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .trie-node {
+            display: inline-block;
+            text-align: center;
+            margin: 5px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            position: relative;
+        }
+        .trie-node.root {
+            background-color: #dff0d8;
+        }
+        .trie-node.leaf {
+            background-color: #d9edf7;
+        }
+        .trie-level {
+            display: flex;
+            justify-content: center;
+        }
+        .trie-link {
+            height: 20px;
+            border-left: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>ÁRBOLES TRIE (Ejercicios)</h1>
+   
+   
+    
+    <div class="autocomplete-container">
+        <input type="text" id="search" placeholder="Escribe para buscar...">
+        <div class="suggestions" id="suggestions"></div>
+    </div>
+
+    <div id="trie-container" class="trie-container"></div>
+
+    <script>
+        class TrieNode {
+            constructor() {
+                this.children = {};
+                this.isEndOfWord = false;
+            }
+        }
+
+        class Trie {
+            constructor() {
+                this.root = new TrieNode();
+            }
+
+            insert(word) {
+                let node = this.root;
+                for (let char of word) {
+                    if (!node.children[char]) {
+                        node.children[char] = new TrieNode();
+                    }
+                    node = node.children[char];
+                }
+                node.isEndOfWord = true;
+            }
+
+            search(prefix) {
+                let node = this.root;
+                let path = [];
+                for (let char of prefix) {
+                    if (!node.children[char]) {
+                        return { suggestions: [], path };
+                    }
+                    node = node.children[char];
+                    path.push({ char, node });
+                }
+                return { suggestions: this.collectAllWords(node, prefix), path };
+            }
+
+            collectAllWords(node, prefix) {
+                let results = [];
+                if (node.isEndOfWord) {
+                    results.push(prefix);
+                }
+                for (let char in node.children) {
+                    results = results.concat(this.collectAllWords(node.children[char], prefix + char));
+                }
+                return results;
+            }
+        }
+
+        const trie = new Trie();
+        const words = ["alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto", 
+                        "bitand", "bitor", "bool", "break", "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class", 
+                        "compl", "concept", "const", "consteval", "constexpr", "const_cast", "continue", "co_await", "co_return", 
+                        "co_yield", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", 
+                        "export", "extern", "false", "float", "for", "friend", "goto", "if", "inline", "int", "long", "mutable", 
+                        "namespace", "new", "noexcept", "not", "not_eq", "nullptr", "operator", "or", "or_eq", "private", 
+                        "protected", "public", "register", "reinterpret_cast", "requires", "return", "short", "signed", 
+                        "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized", "template", 
+                        "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", 
+                        "using", "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq"];
+
+        words.forEach(word => trie.insert(word));
+
+        const searchInput = document.getElementById('search');
+        const suggestionsContainer = document.getElementById('suggestions');
+        const trieContainer = document.getElementById('trie-container');
+
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value;
+            const { suggestions, path } = trie.search(query);
+            suggestionsContainer.innerHTML = '';
+            suggestions.forEach(suggestion => {
+                const suggestionElement = document.createElement('div');
+                suggestionElement.textContent = suggestion;
+                suggestionElement.addEventListener('click', () => {
+                    searchInput.value = suggestion;
+                    suggestionsContainer.innerHTML = '';
+                });
+                suggestionsContainer.appendChild(suggestionElement);
+            });
+            visualizeTrie(path, suggestions);
+        });
+
+        function visualizeTrie(path, suggestions) {
+            trieContainer.innerHTML = '';
+            let currentLevel = document.createElement('div');
+            currentLevel.className = 'trie-level';
+            trieContainer.appendChild(currentLevel);
+            let lastNode = null;
+
+            path.forEach(({ char, node }, index) => {
+                const nodeElement = document.createElement('div');
+                nodeElement.className = 'trie-node';
+                if (index === 0) nodeElement.classList.add('root');
+                nodeElement.textContent = char;
+                currentLevel.appendChild(nodeElement);
+                if (lastNode) {
+                    const link = document.createElement('div');
+                    link.className = 'trie-link';
+                    lastNode.appendChild(link);
+                }
+                lastNode = nodeElement;
+
+                if (Object.keys(node.children).length > 0) {
+                    const nextLevel = document.createElement('div');
+                    nextLevel.className = 'trie-level';
+                    nodeElement.appendChild(nextLevel);
+                    currentLevel = nextLevel;
+                }
+            });
+
+            suggestions.forEach(suggestion => {
+                const suggestionNode = document.createElement('div');
+                suggestionNode.className = 'trie-node leaf';
+                suggestionNode.textContent = suggestion;
+                lastNode.appendChild(suggestionNode);
+            });
+        }
+    </script>
+</body>
+</html>
